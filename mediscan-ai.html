@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>MediScan AI — Symptom Checker & Health Triage</title>
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+ <script src="https://cdn.tailwindcss.com"></script>
+ <style>
+  body { font-family: 'DM Sans', sans-serif; }
+  .font-serif { font-family: 'DM Serif Display', serif; }
+  .visible { display: block !important; }
+  .tab-btn.active { color: #14532d; border-bottom-color: #14532d; }
+  .quick-tag.selected { background: #dcfce7; border-color: #16a34a; color: #14532d; }
+ </style>
+</head>
+<body class="min-h-screen bg-stone-50 text-stone-900">
+
+<!-- NAV -->
+<nav class="sticky top-0 z-50 h-16 border-b border-stone-200 bg-white/80 backdrop-blur">
+  <div class="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
+  <a href="#" class="flex items-center gap-2.5 no-underline">
+    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-900">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm1 11H9V9h2v4zm0-6H9V5h2v2z" fill="white"/>
+      </svg>
+    </div>
+    <span class="font-serif text-xl text-stone-900">Medi<span class="text-emerald-700">Scan</span> AI</span>
+  </a>
+  <div class="hidden items-center gap-6 md:flex">
+    <a href="#" class="text-sm font-medium text-stone-600 hover:text-stone-900" onclick="switchTab('checklist'); return false;">Symptom Checklist</a>
+    <a href="#" class="text-sm font-medium text-stone-600 hover:text-stone-900" onclick="switchTab('history'); return false;">History</a>
+    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">MVP v1.0</span>
+    <span class="text-xs font-semibold text-stone-600" id="navUser"></span>
+    <button class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50" id="navLogout" onclick="logout()" style="display:none">Logout</button>
+  </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="mx-auto max-w-3xl px-4 pb-6 pt-12 text-center">
+  <div class="mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-900">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="6"/></svg>
+    AI-Powered Health Triage
+  </div>
+  <h1 class="font-serif mt-5 text-4xl leading-tight text-stone-900 md:text-5xl">Understand your symptoms <em class="italic text-emerald-700">before</em> you panic</h1>
+  <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone-600">Describe what you're feeling in plain language. MediScan AI analyses your symptoms and tells you whether to rest at home, see a doctor, or seek emergency care — in seconds.</p>
+  <div class="mt-8 flex flex-wrap justify-center gap-3">
+    <div class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-900"><span class="h-2 w-2 rounded-full bg-current"></span> Home Care</div>
+    <div class="flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900"><span class="h-2 w-2 rounded-full bg-current"></span> See a Doctor</div>
+    <div class="flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-900"><span class="h-2 w-2 rounded-full bg-current"></span> Emergency</div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="mx-auto grid max-w-4xl grid-cols-1 gap-3 px-4 pb-8 md:grid-cols-3" id="statsBar">
+  <div class="rounded-2xl border border-stone-200 bg-white p-4 text-center">
+    <div class="font-serif text-3xl leading-none text-stone-900" id="statChecks">0</div>
+    <div class="mt-1 text-xs font-medium text-stone-500">Checks completed</div>
+  </div>
+  <div class="rounded-2xl border border-stone-200 bg-white p-4 text-center">
+    <div class="font-serif text-3xl leading-none text-stone-900">&lt; 3s</div>
+    <div class="mt-1 text-xs font-medium text-stone-500">Avg. response time</div>
+  </div>
+  <div class="rounded-2xl border border-stone-200 bg-white p-4 text-center">
+    <div class="font-serif text-3xl leading-none text-stone-900">3</div>
+    <div class="mt-1 text-xs font-medium text-stone-500">Triage categories</div>
+  </div>
+</div>
+
+<!-- MAIN CARD -->
+<div class="mx-auto max-w-4xl px-4 pb-12">
+  <div class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm" id="mainCard">
+
+    <!-- AUTH PANEL -->
+    <div class="border-b border-stone-200" id="authBanner" style="display:none">
+      <div class="p-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div class="font-serif text-2xl text-stone-900">Sign in to continue</div>
+            <div class="mt-1 text-sm text-stone-600">Create an account or log in to run symptom analysis.</div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+            <div class="text-sm font-semibold text-stone-900">Login</div>
+            <div class="mt-3 grid grid-cols-1 gap-2">
+              <input class="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-emerald-100" id="loginEmail" placeholder="Email" autocomplete="email">
+              <input type="password" class="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-emerald-100" id="loginPassword" placeholder="Password" autocomplete="current-password">
+              <button class="mt-1 w-full rounded-xl bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" onclick="login()">Login</button>
+              <div class="text-xs text-rose-700" id="loginError" style="display:none"></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+            <div class="text-sm font-semibold text-stone-900">Register</div>
+            <div class="mt-3 grid grid-cols-1 gap-2">
+              <input class="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-emerald-100" id="regEmail" placeholder="Email" autocomplete="email">
+              <input type="password" class="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-emerald-100" id="regPassword" placeholder="Password (min 6 chars)" autocomplete="new-password">
+              <button class="mt-1 w-full rounded-xl border border-emerald-900 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-50" onclick="register()">Create account</button>
+              <div class="text-xs text-rose-700" id="regError" style="display:none"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="flex gap-6 border-b border-stone-200 px-6">
+      <button class="tab-btn active -mb-px border-b-2 border-transparent py-4 text-sm font-semibold text-stone-500" onclick="switchTab('input')" id="tabInput">Describe Symptoms</button>
+      <button class="tab-btn -mb-px border-b-2 border-transparent py-4 text-sm font-semibold text-stone-500 hover:text-stone-700" onclick="switchTab('checklist')" id="tabChecklist">Guided Checklist</button>
+      <button class="tab-btn -mb-px border-b-2 border-transparent py-4 text-sm font-semibold text-stone-500 hover:text-stone-700" onclick="switchTab('history')" id="tabHistory">History</button>
+    </div>
+
+    <!-- INPUT TAB -->
+    <div id="panelInput">
+      <div class="p-6" id="inputPanel">
+        <div class="relative mb-5">
+          <textarea class="w-full min-h-[120px] resize-y rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 pr-16 text-sm text-stone-900 outline-none focus:bg-white focus:ring-4 focus:ring-emerald-100" id="symptomText" placeholder="Describe your symptoms in your own words… e.g. 'I have a severe headache, fever of 38.5°C, and feel very tired. It started yesterday morning.'" maxlength="1000" oninput="updateChar()"></textarea>
+          <span class="absolute bottom-3 right-3 text-xs text-stone-400"><span id="charCount">0</span>/1000</span>
+        </div>
+
+        <p class="text-xs font-bold uppercase tracking-wider text-stone-400">Quick add symptoms</p>
+        <div class="mt-3 flex flex-wrap gap-2" id="quickTags"></div>
+
+        <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-400">Age group</label>
+            <select class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-4 focus:ring-emerald-100" id="ageGroup">
+              <option value="">Select age</option>
+              <option>Child (0–12)</option>
+              <option>Teen (13–17)</option>
+              <option>Adult (18–64)</option>
+              <option>Senior (65+)</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-400">Biological sex</label>
+            <select class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-4 focus:ring-emerald-100" id="bioSex">
+              <option value="">Select</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Prefer not to say</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-400">Duration</label>
+            <select class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm outline-none focus:bg-white focus:ring-4 focus:ring-emerald-100" id="duration">
+              <option value="">Select</option>
+              <option>A few hours</option>
+              <option>1–2 days</option>
+              <option>3–7 days</option>
+              <option>1–2 weeks</option>
+              <option>More than 2 weeks</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-stone-400">Pain / Discomfort Level</span>
+            <span class="text-sm font-semibold text-stone-900" id="severityVal">5 / 10</span>
+          </div>
+          <input type="range" min="1" max="10" value="5" class="w-full accent-emerald-700" id="severitySlider" oninput="updateSeverity()" step="1">
+          <div class="mt-2 flex justify-between text-xs text-stone-400">
+            <span>Mild (1)</span><span>Moderate (5)</span><span>Severe (10)</span>
+          </div>
+        </div>
+
+        <button class="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60" id="submitBtn" onclick="analyseSymptoms()">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5C4.86 1.5 1.5 4.86 1.5 9s3.36 7.5 7.5 7.5 7.5-3.36 7.5-7.5S13.14 1.5 9 1.5zm0 3.75a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 6.75c-1.875 0-3.525-.945-4.5-2.385.022-1.492 3-2.31 4.5-2.31 1.492 0 4.478.818 4.5 2.31A5.238 5.238 0 019 12z" fill="white"/></svg>
+          Analyse My Symptoms
+        </button>
+        <p class="mt-3 text-center text-xs leading-relaxed text-stone-500"><strong class="text-stone-700">Important:</strong> MediScan AI is for informational purposes only and does not replace professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.</p>
+      </div>
+
+      <!-- LOADING -->
+      <div class="hidden p-10 text-center" id="loadingPanel">
+        <div class="mx-auto mb-5 h-14 w-14 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-700"></div>
+        <p class="text-base font-semibold text-stone-900">Analysing your symptoms…</p>
+        <p class="mt-1 text-sm text-stone-500">Our AI is processing your input</p>
+        <div class="mx-auto mt-6 flex max-w-xs flex-col gap-2 text-left text-xs text-stone-500">
+          <div class="flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-stone-300" id="step1dot"></div><span id="step1text">Parsing symptom keywords</span></div>
+          <div class="flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-stone-300" id="step2dot"></div><span id="step2text">Running classification model</span></div>
+          <div class="flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-stone-300" id="step3dot"></div><span id="step3text">Applying clinical triage rules</span></div>
+          <div class="flex items-center gap-2"><div class="h-2 w-2 rounded-full bg-stone-300" id="step4dot"></div><span id="step4text">Generating recommendations</span></div>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="hidden p-6" id="resultsPanel">
+        <div id="triageBanner" class="mb-6 flex gap-4 rounded-xl border border-stone-200 bg-stone-50 p-5">
+          <div class="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-emerald-900 text-lg text-white" id="triageIcon"></div>
+          <div>
+            <div class="font-serif text-xl text-stone-900" id="triageTitle"></div>
+            <div class="mt-1 text-sm leading-relaxed text-stone-600" id="triageDesc"></div>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <div class="mb-3 border-b border-stone-200 pb-2 text-xs font-extrabold uppercase tracking-wider text-stone-400">Possible Conditions</div>
+          <div class="flex flex-col gap-3" id="conditionList"></div>
+        </div>
+
+        <div class="mb-6">
+          <div class="mb-3 border-b border-stone-200 pb-2 text-xs font-extrabold uppercase tracking-wider text-stone-400">Recommended Next Steps</div>
+          <div class="flex flex-col gap-2" id="actionList"></div>
+        </div>
+
+        <div class="mb-6" id="warningSection" style="display:none">
+          <div class="mb-3 border-b border-stone-200 pb-2 text-xs font-extrabold uppercase tracking-wider text-stone-400">Warning Signs — Seek Immediate Help If</div>
+          <div class="flex flex-col gap-2" id="warningList"></div>
+        </div>
+
+        <div class="mb-6">
+          <div class="mb-3 border-b border-stone-200 pb-2 text-xs font-extrabold uppercase tracking-wider text-stone-400">Ask a Follow-up Question</div>
+          <div class="grid grid-cols-1 gap-2 md:grid-cols-2" id="followupGrid"></div>
+        </div>
+
+        <div class="mt-6 flex flex-col gap-2 border-t border-stone-200 pt-5 md:flex-row">
+          <button class="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-50" id="copyBtn" onclick="copyReport()">Copy Report</button>
+          <button class="w-full rounded-xl bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" onclick="resetToInput()">New Check</button>
+        </div>
+      </div>
+
+      <!-- FOLLOW-UP CHAT -->
+      <div class="hidden border-t border-stone-200 px-6 pb-6" id="followupChat">
+        <div class="py-4 text-xs font-extrabold uppercase tracking-wider text-stone-400">Follow-up Questions</div>
+        <div class="mb-3 flex max-h-72 flex-col gap-2 overflow-y-auto" id="chatMessages"></div>
+        <div class="flex gap-2">
+          <input type="text" class="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm outline-none focus:ring-4 focus:ring-emerald-100" id="chatInput" placeholder="Ask about your results…" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="rounded-xl bg-emerald-900 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" id="chatSend" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKLIST TAB -->
+    <div id="panelChecklist" style="display:none">
+      <div class="p-6">
+        <div id="checklistSections"></div>
+        <button class="mt-2 w-full rounded-xl bg-emerald-900 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700" onclick="submitChecklist()">
+          Analyse Selected Symptoms
+        </button>
+        <p class="mt-3 text-center text-xs text-stone-500"><strong class="text-stone-700">Tip:</strong> Select all symptoms that apply, then click Analyse to get your triage assessment.</p>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="panelHistory" style="display:none">
+      <div class="p-6">
+        <div class="rounded-2xl border border-stone-200 bg-stone-50 p-10 text-center text-stone-500" id="historyEmpty">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2"/><path d="M24 14v10l6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <p class="mt-2 text-sm font-semibold text-stone-700">No history yet</p>
+          <p class="mt-1 text-xs">Your symptom checks will appear here</p>
+        </div>
+        <div class="mt-3 flex flex-col gap-2" id="historyList"></div>
+        <button class="mt-4 w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-50" id="clearHistoryBtn" onclick="clearHistory()" style="display:none">Clear History</button>
+      </div>
+    </div>
+<!-- FOOTER -->
+<footer>
+  <div class="mx-auto max-w-4xl px-4 pb-10 text-center text-xs text-stone-500">
+    <p>MediScan AI &mdash; Software Construction Course Project &bull; April 2026</p>
+    <p class="mt-1"><strong class="text-stone-700">Not a substitute for professional medical advice.</strong> Always consult a qualified healthcare provider.</p>
+  </div>
+</footer>
+
+<script>
+const QUICK_SYMPTOMS = [
+  'Headache','Fever','Cough','Sore throat','Fatigue','Nausea',
+  'Chest pain','Shortness of breath','Dizziness','Stomach ache',
+  'Back pain','Joint pain','Rash','Vomiting','Diarrhoea',
+  'Runny nose','Muscle aches','Loss of appetite'
+];
+
+const CHECKLIST_DATA = {
+  'Head & Neurological': ['Headache','Migraine','Dizziness','Confusion','Memory issues','Vision changes','Fainting','Seizure-like symptoms'],
+  'Respiratory': ['Cough','Sore throat','Shortness of breath','Wheezing','Chest tightness','Runny nose','Sneezing','Loss of smell'],
+  'Chest & Cardiovascular': ['Chest pain','Palpitations','Irregular heartbeat','Chest pressure','Breathlessness at rest'],
+  'Digestive': ['Nausea','Vomiting','Diarrhoea','Constipation','Stomach pain','Bloating','Loss of appetite','Blood in stool'],
+  'Musculoskeletal': ['Back pain','Neck pain','Joint pain','Muscle aches','Swollen joints','Weakness'],
+  'General': ['Fever','Fatigue','Weight loss','Night sweats','Chills','Swollen lymph nodes','Rash','Bruising easily']
+};
+
+let sessionContext = null;
+let queryHistory = [];
+let totalChecks = parseInt(localStorage.getItem('mediscan_count') || '0');
+
+const API_BASE = 'http://127.0.0.1:8000';
+
+function getAccessToken() {
+  return localStorage.getItem('mediscan_token');
+}
+
+function setAccessToken(token) {
+  if (token) localStorage.setItem('mediscan_token', token);
+  else localStorage.removeItem('mediscan_token');
+}
+
+function setAuthError(id, msg) {
+  const el = document.getElementById(id);
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = '';
+  el.textContent = msg;
+}
+
+async function fetchMe() {
+  const token = getAccessToken();
+  if (!token) return null;
+  const res = await fetch(API_BASE + '/api/auth/me', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+async function refreshAuthUI() {
+  const me = await fetchMe();
+  const authed = !!me;
+
+  document.getElementById('authBanner').style.display = authed ? 'none' : '';
+  document.getElementById('mainCard').classList.toggle('opacity-60', !authed);
+
+  const historyKey = authed ? ('mediscan_history_' + me.email) : null;
+  queryHistory = JSON.parse(localStorage.getItem(historyKey || 'mediscan_history') || '[]');
+  renderHistory();
+
+  const navUser = document.getElementById('navUser');
+  const navLogout = document.getElementById('navLogout');
+  if (authed) {
+    navUser.textContent = me.email;
+    navLogout.style.display = '';
+  } else {
+    navUser.textContent = '';
+    navLogout.style.display = 'none';
+  }
+
+  return authed;
+}
+
+async function login() {
+  setAuthError('loginError', '');
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Login failed');
+
+    setAccessToken(data.accessToken);
+    await refreshAuthUI();
+  } catch (e) {
+    setAccessToken(null);
+    setAuthError('loginError', e.message);
+  }
+}
+
+async function register() {
+  setAuthError('regError', '');
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+
+  try {
+    const res = await fetch(API_BASE + '/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Registration failed');
+
+    setAccessToken(data.accessToken);
+    await refreshAuthUI();
+  } catch (e) {
+    setAccessToken(null);
+    setAuthError('regError', e.message);
+  }
+}
+
+function logout() {
+  setAccessToken(null);
+  refreshAuthUI();
+}
+
+function init() {
+  const qt = document.getElementById('quickTags');
+  QUICK_SYMPTOMS.forEach(s => {
+    const tag = document.createElement('span');
+    tag.className = 'quick-tag inline-flex cursor-pointer select-none items-center rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50';
+    tag.textContent = s;
+    tag.onclick = () => toggleQuickTag(tag, s);
+    qt.appendChild(tag);
+  });
+
+  const cs = document.getElementById('checklistSections');
+  Object.entries(CHECKLIST_DATA).forEach(([cat, items]) => {
+    const sec = document.createElement('div');
+    sec.className = 'mb-6';
+    sec.innerHTML = `<div class="mb-3 flex items-center justify-between"><div class="text-sm font-semibold text-stone-900">${cat}</div><span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-900">${items.length} symptoms</span></div><div class="flex flex-wrap gap-2"></div>`;
+    const wrap = sec.querySelector('div:last-child');
+    items.forEach(item => {
+      const el = document.createElement('label');
+      el.className = 'inline-flex cursor-pointer select-none items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50';
+      el.innerHTML = `<input type="checkbox" value="${item}"><svg class="check-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="currentColor" stroke-width="1.2"/></svg>${item}`;
+      el.querySelector('input').addEventListener('change', e => {
+        el.classList.toggle('checked', e.target.checked);
+        el.classList.toggle('bg-emerald-50', e.target.checked);
+        el.classList.toggle('border-emerald-400', e.target.checked);
+        el.classList.toggle('text-emerald-900', e.target.checked);
+        el.querySelector('svg').innerHTML = e.target.checked
+          ? `<circle cx="7" cy="7" r="7" fill="currentColor"/><path d="M4 7l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`
+          : `<circle cx="7" cy="7" r="6.5" stroke="currentColor" stroke-width="1.2"/>`;
+      });
+      wrap.appendChild(el);
+    });
+    cs.appendChild(sec);
+  });
+
+  renderHistory();
+  updateStatCount();
+}
+
+function toggleQuickTag(tag, sym) {
+  tag.classList.toggle('selected');
+  const ta = document.getElementById('symptomText');
+  const cur = ta.value.trim();
+  if (tag.classList.contains('selected')) {
+    ta.value = cur ? cur + ', ' + sym.toLowerCase() : sym;
+  } else {
+    const rx = new RegExp(',?\\s*' + sym.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ',?\\s*', 'i');
+    ta.value = ta.value.replace(rx, ' ').replace(/^,\s*/, '').replace(/,\s*$/, '').trim();
+  }
+  updateChar();
+}
+
+function updateChar() {
+  const l = document.getElementById('symptomText').value.length;
+  document.getElementById('charCount').textContent = l;
+}
+
+function updateSeverity() {
+  const v = document.getElementById('severitySlider').value;
+  document.getElementById('severityVal').textContent = v + ' / 10';
+}
+
+function switchTab(tab) {
+  ['input','checklist','history'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
+    document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = 'none';
+  });
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = '';
+}
+
+function submitChecklist() {
+  const checked = Array.from(document.querySelectorAll('#checklistSections input:checked')).map(c => c.value);
+  if (!checked.length) { alert('Please select at least one symptom.'); return; }
+  document.getElementById('symptomText').value = 'I have the following symptoms: ' + checked.join(', ') + '.';
+  updateChar();
+  switchTab('input');
+  analyseSymptoms();
+}
+
+async function analyseSymptoms() {
+  const authed = await refreshAuthUI();
+  if (!authed) return;
+
+  const symptoms = document.getElementById('symptomText').value.trim();
+  if (!symptoms) return alert('Please describe your symptoms first.');
+
+  const age = document.getElementById('ageGroup').value;
+  const sex = document.getElementById('bioSex').value;
+  const dur = document.getElementById('duration').value;
+  const sev = document.getElementById('severitySlider').value;
+
+  document.getElementById('inputPanel').style.display = 'none';
+  document.getElementById('resultsPanel').classList.add('hidden');
+  document.getElementById('followupChat').classList.add('hidden');
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('loadingPanel').classList.remove('hidden');
+
+  animateLoadingSteps();
+
+  const patientMeta = [age && `Age: ${age}`, sex && `Sex: ${sex}`, dur && `Duration: ${dur}`, `Pain level: ${sev}/10`].filter(Boolean).join('; ');
+
+  try {
+    const res = await fetch(API_BASE + '/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getAccessToken() },
+      body: JSON.stringify({
+        symptomsText: symptoms,
+        ageGroup: age || null,
+        bioSex: sex || null,
+        duration: dur || null,
+        severity: sev ? parseInt(sev, 10) : null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Backend error');
+    }
+
+    const apiData = await res.json();
+    const parsed = {
+      triage: apiData.triageLevel === 'home' ? 'home_care' : apiData.triageLevel === 'emergency' ? 'emergency' : 'see_doctor',
+      triage_summary: apiData.triageDesc,
+      conditions: (apiData.possibleConditions || []).map(c => ({
+        name: c.name,
+        confidence: c.confidence,
+        description: c.description
+      })),
+      actions: apiData.recommendedNextSteps || [],
+      warnings: apiData.warningSigns || [],
+      followup_questions: apiData.followUpQuestions || [],
+      summary: apiData.triageDesc
+    };
+
+    sessionContext = { symptoms, age, sex, dur, sev, result: parsed };
+    saveHistory(symptoms, parsed.triage);
+    renderResults(parsed);
+  } catch (err) {
+    document.getElementById('loadingPanel').classList.add('hidden');
+    document.getElementById('inputPanel').style.display = '';
+    alert('Something went wrong: ' + err.message + '\n\nPlease check your API connection.');
+  }
+}
+
+function animateLoadingSteps() {
+  const steps = [1, 2, 3, 4];
+  steps.forEach(i => {
+    document.getElementById('step' + i + 'dot').className = 'step-dot';
+  });
+  let idx = 0;
+  const iv = setInterval(() => {
+    if (idx > 0) document.getElementById('step' + idx + 'dot').className = 'step-dot done';
+    idx++;
+    if (idx <= 4) document.getElementById('step' + idx + 'dot').className = 'step-dot active';
+    else clearInterval(iv);
+  }, 600);
+}
+
+function renderResults(data) {
+  setTimeout(() => {
+    document.getElementById('loadingPanel').classList.add('hidden');
+
+    const triageMap = {
+      home_care: { cls: 'home', title: '🏠 Home Care', icon: '🏠' },
+      see_doctor: { cls: 'doctor', title: '👨‍⚕️ See a Doctor', icon: '👨‍⚕️' },
+      emergency: { cls: 'emergency', title: '🚨 Emergency', icon: '🚨' }
+    };
+    const triage = triageMap[data.triage] || triageMap.see_doctor;
+
+    const banner = document.getElementById('triageBanner');
+    banner.className = 'mb-6 flex gap-4 rounded-xl border p-5 ' + (triage.cls === 'home' ? 'border-emerald-200 bg-emerald-50' : triage.cls === 'doctor' ? 'border-amber-200 bg-amber-50' : 'border-rose-200 bg-rose-50');
+    const iconBox = document.getElementById('triageIcon');
+    iconBox.className = 'flex h-11 w-11 flex-none items-center justify-center rounded-xl text-lg text-white ' + (triage.cls === 'home' ? 'bg-emerald-900' : triage.cls === 'doctor' ? 'bg-amber-700' : 'bg-rose-700');
+    iconBox.textContent = triage.icon;
+    const titleEl = document.getElementById('triageTitle');
+    titleEl.className = 'font-serif text-xl ' + (triage.cls === 'home' ? 'text-emerald-900' : triage.cls === 'doctor' ? 'text-amber-900' : 'text-rose-700');
+    titleEl.textContent = triage.title;
+    document.getElementById('triageDesc').textContent = data.triage_summary;
+
+    const cl = document.getElementById('conditionList');
+    cl.innerHTML = '';
+    (data.conditions || []).forEach((c, i) => {
+      const pct = Math.round((c.confidence || 0.5) * 100);
+      const div = document.createElement('div');
+      div.className = 'flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-4';
+      div.style.animationDelay = (i * 0.08) + 's';
+      div.innerHTML = `<div class="flex-1">
+        <div class="text-sm font-semibold text-stone-900">${c.name}</div>
+        <div class="mt-0.5 text-xs text-stone-600">${c.description || ''}</div>
+        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-stone-200"><div class="confidence-bar-inner h-full rounded-full bg-emerald-700" style="width:0%" data-width="${pct}%"></div></div>
+      </div><div class="w-10 text-right text-xs font-bold text-stone-700">${pct}%</div>`;
+      cl.appendChild(div);
+    });
+    setTimeout(() => {
+      document.querySelectorAll('.confidence-bar-inner').forEach(b => b.style.width = b.dataset.width);
+    }, 200);
+
+    const al = document.getElementById('actionList');
+    al.innerHTML = '';
+    (data.actions || []).forEach((a, i) => {
+      const div = document.createElement('div');
+      div.className = 'flex items-start gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm text-stone-900';
+      div.style.animationDelay = (0.3 + i * 0.07) + 's';
+      div.innerHTML = `<div class="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-900 text-xs font-extrabold text-white">${i + 1}</div><span class="leading-relaxed">${a}</span>`;
+      al.appendChild(div);
+    });
+
+    const ws = document.getElementById('warningSection');
+    const wl = document.getElementById('warningList');
+    if (data.warnings && data.warnings.length) {
+      wl.innerHTML = '';
+      ws.classList.remove('hidden');
+      data.warnings.forEach(w => {
+        const div = document.createElement('div');
+        div.className = 'flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800';
+        div.innerHTML = `<span class="text-base">⚠️</span><span class="leading-relaxed">${w}</span>`;
+        wl.appendChild(div);
+      });
+    } else {
+      ws.classList.add('hidden');
+    }
+
+    const fg = document.getElementById('followupGrid');
+    fg.innerHTML = '';
+    (data.followup_questions || []).forEach(q => {
+      const div = document.createElement('div');
+      div.className = 'cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-900 hover:bg-emerald-100';
+      div.textContent = q;
+      div.onclick = () => openFollowup(q);
+      fg.appendChild(div);
+    });
+
+    document.getElementById('resultsPanel').classList.remove('hidden');
+    totalChecks++;
+    localStorage.setItem('mediscan_count', totalChecks);
+    updateStatCount();
+  }, 2400);
+}
+
+function updateStatCount() {
+  document.getElementById('statChecks').textContent = totalChecks;
+}
+
+function openFollowup(q) {
+  const chat = document.getElementById('followupChat');
+  chat.classList.remove('hidden');
+  document.getElementById('chatInput').value = q;
+  sendChat();
+  chat.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg || !sessionContext) return;
+
+  const authed = await refreshAuthUI();
+  if (!authed) return;
+
+  const msgs = document.getElementById('chatMessages');
+  const sendBtn = document.getElementById('chatSend');
+
+  const uDiv = document.createElement('div');
+  uDiv.className = 'ml-auto max-w-[85%] rounded-xl rounded-br-md bg-emerald-900 px-4 py-2 text-sm text-white';
+  uDiv.textContent = msg;
+  msgs.appendChild(uDiv);
+  input.value = '';
+  sendBtn.disabled = true;
+
+  const aiDiv = document.createElement('div');
+  aiDiv.className = 'mr-auto max-w-[85%] rounded-xl rounded-bl-md border border-stone-200 bg-white px-4 py-2 text-sm text-stone-900';
+  aiDiv.textContent = '…';
+  msgs.appendChild(aiDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const res = await fetch(API_BASE + '/api/followup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getAccessToken() },
+      body: JSON.stringify({
+        context: sessionContext,
+        question: msg
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Backend error');
+    }
+
+    const data = await res.json();
+    aiDiv.textContent = data.answer || 'Sorry, I could not process that question. Please try again.';
+  } catch {
+    aiDiv.textContent = 'Sorry, I could not process that question. Please try again.';
+  }
+
+  sendBtn.disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function resetToInput() {
+  document.getElementById('resultsPanel').classList.add('hidden');
+  document.getElementById('followupChat').classList.add('hidden');
+  document.getElementById('inputPanel').style.display = '';
+  document.getElementById('loadingPanel').classList.add('hidden');
+  document.getElementById('symptomText').value = '';
+  updateChar();
+  document.querySelectorAll('.quick-tag').forEach(t => t.classList.remove('selected'));
+  document.getElementById('severitySlider').value = 5;
+  updateSeverity();
+  sessionContext = null;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function saveHistory(symptoms, triage) {
+  const meEmail = document.getElementById('navUser').textContent || '';
+  const historyKey = meEmail ? ('mediscan_history_' + meEmail) : 'mediscan_history';
+  const entry = {
+    symptoms: symptoms.length > 60 ? symptoms.substring(0, 60) + '…' : symptoms,
+    triage,
+    time: new Date().toLocaleString()
+  };
+  queryHistory.unshift(entry);
+  if (queryHistory.length > 20) queryHistory = queryHistory.slice(0, 20);
+  localStorage.setItem(historyKey, JSON.stringify(queryHistory));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const empty = document.getElementById('historyEmpty');
+  const clearBtn = document.getElementById('clearHistoryBtn');
+  list.innerHTML = '';
+  if (!queryHistory.length) { empty.style.display = ''; clearBtn.style.display = 'none'; return; }
+  empty.style.display = 'none';
+  clearBtn.style.display = '';
+  queryHistory.forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'rounded-2xl border border-stone-200 bg-white p-4';
+    const triageLabel = h.triage === 'home_care' ? 'Home Care' : h.triage === 'emergency' ? 'Emergency' : 'See Doctor';
+    const triageCls = h.triage === 'home_care' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : h.triage === 'emergency' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-amber-200 bg-amber-50 text-amber-900';
+    div.innerHTML = `<div class="flex items-center justify-between gap-3">
+      <span class="text-sm font-semibold text-stone-900">${h.symptoms}</span>
+      <span class="text-xs text-stone-400">${h.time}</span>
+    </div>
+    <div class="mt-2">
+      <span class="inline-flex rounded-full border px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider ${triageCls}">${triageLabel}</span>
+    </div>`;
+    list.appendChild(div);
+  });
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history?')) return;
+  queryHistory = [];
+  const meEmail = document.getElementById('navUser').textContent || '';
+  const historyKey = meEmail ? ('mediscan_history_' + meEmail) : 'mediscan_history';
+  localStorage.removeItem(historyKey);
+  renderHistory();
+}
+
+function copyReport() {
+  if (!sessionContext) return;
+  const r = sessionContext.result;
+  const triageLabels = { home_care: 'Home Care', see_doctor: 'See a Doctor', emergency: 'EMERGENCY' };
+  let report = `MEDISCAN AI REPORT\n${'='.repeat(40)}\n`;
+  report += `Triage: ${triageLabels[r.triage] || r.triage}\n`;
+  report += `Summary: ${r.triage_summary}\n\n`;
+  report += `POSSIBLE CONDITIONS:\n`;
+  (r.conditions || []).forEach(c => report += `• ${c.name} (${Math.round(c.confidence * 100)}%): ${c.description}\n`);
+  report += `\nRECOMMENDED ACTIONS:\n`;
+  (r.actions || []).forEach((a, i) => report += `${i + 1}. ${a}\n`);
+  if (r.warnings?.length) {
+    report += `\nWARNING SIGNS:\n`;
+    r.warnings.forEach(w => report += `⚠ ${w}\n`);
+  }
+  report += `\n${'='.repeat(40)}\nNot a substitute for professional medical advice.\nGenerated: ${new Date().toLocaleString()}`;
+  navigator.clipboard.writeText(report).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+
+init();
+refreshAuthUI();
+</script>
+</body>
+</html>
