@@ -18,7 +18,10 @@ from sqlalchemy import Boolean, Column, DateTime, Integer, String, create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import declarative_base, sessionmaker
 from werkzeug.security import check_password_hash, generate_password_hash
-
+import logging
+import boto3
+import watchtower
+from cloudwatch_metrics import metrics, setup_standard_alarms
 # Load ML models
 script_dir = os.path.dirname(os.path.abspath(__file__))
 models_dir = os.path.join(script_dir, "models")
@@ -75,6 +78,38 @@ def create_app() -> Flask:
     CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
     app.config["JWT_SECRET_KEY"] = _get_env("JWT_SECRET_KEY", "dev-change-me")
+
+    # Configure logging
+    log_level = logging.INFO
+    logging.basicConfig(level=log_level)
+    app.logger.setLevel(log_level)
+
+    aws_region = _get_env("AWS_REGION", "")
+    aws_access_key = _get_env("AWS_ACCESS_KEY_ID", "")
+    aws_secret_key = _get_env("AWS_SECRET_ACCESS_KEY", "")
+
+    if aws_region and aws_access_key and aws_secret_key:
+        try:
+            boto3_client = boto3.client(
+                "logs",
+                region_name=aws_region,
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key
+            )
+            cloudwatch_handler = watchtower.CloudWatchLogHandler(
+                boto3_client=boto3_client,
+                log_group_name="MediScanLogs",
+                log_stream_name="FlaskBackend"
+            )
+            app.logger.addHandler(cloudwatch_handler)
+            logging.getLogger("werkzeug").addHandler(cloudwatch_handler)
+            app.logger.info("CloudWatch logging configured successfully.")
+            
+            # Set up CloudWatch metrics and alarms
+            setup_standard_alarms()
+            app.logger.info("CloudWatch alarms configured successfully.")
+        except Exception as e:
+            app.logger.error(f"Failed to configure CloudWatch logging: {e}")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=12)
     JWTManager(app)
 
@@ -590,5 +625,7 @@ def followup_logic(req_data: dict) -> dict:
 
 if __name__ == "__main__":
     app = create_app()
-    print("Backend running on http://127.0.0.1:8000")
-    app.run(host="127.0.0.1", port=8000, debug=False)
+    host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
+    port = int(os.environ.get("FLASK_RUN_PORT", "8000"))
+    print(f"Binding to {host}:{port}")
+    app.run(host=host, port=port, debug=False)

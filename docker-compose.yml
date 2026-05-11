@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - FLASK_ENV=production
+      - JWT_SECRET_KEY=dev-change-me
+      - ALLOWED_ORIGINS=*
+      # AWS Credentials placeholder for CloudWatch Logs
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-""}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-""}
+      - AWS_REGION=${AWS_REGION:-"us-east-1"}
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
