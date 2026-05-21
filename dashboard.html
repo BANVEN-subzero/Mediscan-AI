@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>MediScan AI — Dashboard</title>
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+ <script src="https://cdn.tailwindcss.com"></script>
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+ <style>
+  body { font-family: 'DM Sans', sans-serif; }
+  .font-serif { font-family: 'DM Serif Display', serif; }
+  .visible { display: block !important; }
+  .tab-btn.active { color: #14532d; border-bottom-color: #14532d; }
+  .quick-tag.selected { background: #dcfce7; border-color: #16a34a; color: #14532d; }
+ </style>
+</head>
+<body class="min-h-screen bg-stone-50 text-stone-900">
+
+<!-- NAV -->
+<nav class="sticky top-0 z-50 h-16 border-b border-stone-200 bg-white/80 backdrop-blur">
+  <div class="mx-auto flex h-full max-w-6xl items-center justify-between px-4">
+  <a href="index.html" class="flex items-center gap-2.5 no-underline">
+    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-900">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm1 11H9V9h2v4zm0-6H9V5h2v2z" fill="white"/>
+      </svg>
+    </div>
+    <span class="font-serif text-xl text-stone-900">Medi<span class="text-emerald-700">Scan</span> AI</span>
+  </a>
+  <div class="flex items-center gap-4 md:gap-6">
+    <a href="index.html" class="hidden text-sm font-medium text-stone-600 hover:text-stone-900 md:block">Home</a>
+    <a href="#" class="hidden text-sm font-medium text-stone-600 hover:text-stone-900 md:block" onclick="switchTab('checklist'); return false;">Symptom Checklist</a>
+    <a href="#" class="hidden text-sm font-medium text-stone-600 hover:text-stone-900 md:block" onclick="switchTab('history'); return false;">History</a>
+    <span class="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 md:block">MVP v1.0</span>
+    <span class="text-xs font-semibold text-stone-600" id="navUser"></span>
+    <button class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50" id="navLogout" onclick="logout()">Logout</button>
+  </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="mx-auto max-w-3xl px-4 pb-6 pt-12 text-center">
+  <div class="mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-900">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="6"/></svg>
+    AI-Powered Health Triage
+  </div>
+  <h1 class="font-serif mt-5 text-4xl leading-tight text-stone-900 md:text-5xl">Understand your symptoms <em class="italic text-emerald-700">before</em> you panic</h1>
+  <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone-600">Describe what you're feeling in plain language. MediScan AI analyses your symptoms and tells you whether to rest at home, see a doctor, or seek emergency care — in seconds.</p>
+  <div class="mt-8 flex flex-wrap justify-center gap-3">
+    <div class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-900"><span class="h-2 w-2 rounded-full bg-current"></span> Home Care</div>
+    <div class="flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900"><span class="h-2 w-2 rounded-full bg-current"></span> See Doctor</div>
+    <div class="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-900"><span class="h-2 w-2 rounded-full bg-current"></span> Emergency</div>
+  </div>
+</section>
+
+<!-- AUTH BANNER -->
+<div id="authBanner" class="mx-auto max-w-3xl px-4 pb-8">
+  <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+    <p class="text-sm font-medium text-emerald-900">Please <a href="login.html" class="text-emerald-700 underline">sign in</a> to save your history and get personalized recommendations.</p>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="mx-auto max-w-3xl px-4 pb-12">
+  <!-- TABS -->
+  <div class="mb-6 border-b border-stone-200">
+    <button onclick="switchTab('checklist')" class="tab-btn active px-4 py-2 text-sm font-medium text-stone-600 border-b-2 border-transparent hover:text-stone-900">Symptom Checklist</button>
+    <button onclick="switchTab('history')" class="tab-btn px-4 py-2 text-sm font-medium text-stone-600 border-b-2 border-transparent hover:text-stone-900">History</button>
+  </div>
+
+  <!-- CHECKLIST TAB -->
+  <div id="checklistTab" class="tab-content visible">
+    <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h2 class="mb-4 text-lg font-semibold text-stone-900">Select your symptoms</h2>
+      
+      <!-- QUICK TAGS -->
+      <div class="mb-4 flex flex-wrap gap-2" id="quickTags">
+        <button onclick="toggleQuickTag('Fever')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Fever</button>
+        <button onclick="toggleQuickTag('Headache')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Headache</button>
+        <button onclick="toggleQuickTag('Cough')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Cough</button>
+        <button onclick="toggleQuickTag('Fatigue')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Fatigue</button>
+        <button onclick="toggleQuickTag('Nausea')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Nausea</button>
+        <button onclick="toggleQuickTag('Chest pain')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Chest pain</button>
+        <button onclick="toggleQuickTag('Shortness of breath')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Shortness of breath</button>
+        <button onclick="toggleQuickTag('Stomach pain')" class="quick-tag rounded-full border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm font-medium text-stone-700 hover:border-emerald-500 hover:bg-emerald-50">Stomach pain</button>
+      </div>
+
+      <!-- TEXT INPUT -->
+      <div class="mb-4">
+        <label class="mb-2 block text-sm font-medium text-stone-700">Or describe your symptoms in detail</label>
+        <textarea id="symptomText" rows="4" class="w-full rounded-lg border border-stone-300 p-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="E.g., I have a severe headache that started yesterday, along with fever and body aches..."></textarea>
+      </div>
+
+      <!-- OPTIONAL FIELDS -->
+      <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div>
+          <label class="mb-2 block text-sm font-medium text-stone-700">Age Group</label>
+          <select id="ageGroup" class="w-full rounded-lg border border-stone-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            <option value="">Select...</option>
+            <option value="0-17">0-17</option>
+            <option value="18-39">18-39</option>
+            <option value="40-59">40-59</option>
+            <option value="60+">60+</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium text-stone-700">Biological Sex</label>
+          <select id="sex" class="w-full rounded-lg border border-stone-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            <option value="">Select...</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium text-stone-700">Duration</label>
+          <select id="duration" class="w-full rounded-lg border border-stone-300 p-2.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+            <option value="">Select...</option>
+            <option value="hours">Hours</option>
+            <option value="days">Days</option>
+            <option value="weeks">Weeks</option>
+            <option value="months">Months</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- PAIN LEVEL -->
+      <div class="mb-6">
+        <label class="mb-2 block text-sm font-medium text-stone-700">Pain/Discomfort Level</label>
+        <input type="range" id="painLevel" min="0" max="10" value="5" class="w-full accent-emerald-600">
+        <div class="mt-1 flex justify-between text-xs text-stone-500">
+          <span>No pain</span>
+          <span id="painValue">5</span>
+          <span>Severe pain</span>
+        </div>
+      </div>
+
+      <!-- SUBMIT BUTTON -->
+      <button onclick="analyzeSymptoms()" id="analyzeBtn" class="w-full rounded-xl bg-emerald-900 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-800 transition">
+        Analyse My Symptoms
+      </button>
+    </div>
+
+    <!-- RESULTS SECTION -->
+    <div id="resultsSection" class="mt-6 hidden">
+      <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-lg font-semibold text-stone-900">Analysis Results</h2>
+        <div id="resultsContent"></div>
+      </div>
+    </div>
+
+    <!-- FOLLOW-UP SECTION -->
+    <div id="followUpSection" class="mt-6 hidden">
+      <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <h2 class="mb-4 text-lg font-semibold text-stone-900">Follow-up Questions</h2>
+        <div id="followUpContent"></div>
+        <div class="mt-4">
+          <input type="text" id="followUpInput" class="w-full rounded-lg border border-stone-300 p-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="Type your follow-up question here...">
+          <button onclick="askFollowUp()" class="mt-2 rounded-xl bg-emerald-900 px-6 py-2 text-sm font-semibold text-white hover:bg-emerald-800 transition">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="historyTab" class="tab-content hidden">
+    <div class="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+      <h2 class="mb-4 text-lg font-semibold text-stone-900">Your Analysis History</h2>
+      <div id="historyContent">
+        <p class="text-stone-600">No history yet. Start analyzing your symptoms!</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+let sessionContext = null;
+let queryHistory = [];
+let totalChecks = parseInt(localStorage.getItem('mediscan_count') || '0');
+
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://127.0.0.1:8000'
+  : (window.location.protocol === 'http:' ? 'http://' + window.location.hostname + ':8000' : 'https://' + window.location.hostname + ':8000');
+
+function getAccessToken() {
+  return localStorage.getItem('mediscan_token');
+}
+
+function setAccessToken(token) {
+  if (token) localStorage.setItem('mediscan_token', token);
+  else localStorage.removeItem('mediscan_token');
+}
+
+function getUser() {
+  const userStr = localStorage.getItem('mediscan_user');
+  return userStr ? JSON.parse(userStr) : null;
+}
+
+function checkAuth() {
+  const token = getAccessToken();
+  const user = getUser();
+  const authBanner = document.getElementById('authBanner');
+  const navUser = document.getElementById('navUser');
+  const navLogout = document.getElementById('navLogout');
+
+  if (token && user) {
+    authBanner.classList.add('hidden');
+    navUser.textContent = user.email;
+    navLogout.style.display = 'block';
+    loadHistory();
+  } else {
+    authBanner.classList.remove('hidden');
+    navUser.textContent = '';
+    navLogout.style.display = 'none';
+  }
+}
+
+function logout() {
+  setAccessToken(null);
+  localStorage.removeItem('mediscan_user');
+  window.location.href = 'login.html';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  
+  if (tab === 'checklist') {
+    document.getElementById('checklistTab').classList.remove('hidden');
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+  } else if (tab === 'history') {
+    document.getElementById('historyTab').classList.remove('hidden');
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    loadHistory();
+  }
+}
+
+function toggleQuickTag(tag) {
+  const btn = event.target;
+  btn.classList.toggle('selected');
+  updateSymptomText();
+}
+
+function updateSymptomText() {
+  const selectedTags = Array.from(document.querySelectorAll('.quick-tag.selected')).map(btn => btn.textContent);
+  const textarea = document.getElementById('symptomText');
+  textarea.value = selectedTags.join(', ');
+}
+
+document.getElementById('painLevel').addEventListener('input', function() {
+  document.getElementById('painValue').textContent = this.value;
+});
+
+async function analyzeSymptoms() {
+  const symptomText = document.getElementById('symptomText').value;
+  const ageGroup = document.getElementById('ageGroup').value;
+  const sex = document.getElementById('sex').value;
+  const duration = document.getElementById('duration').value;
+  const painLevel = document.getElementById('painLevel').value;
+
+  if (!symptomText.trim()) {
+    alert('Please describe your symptoms');
+    return;
+  }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+
+  try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE}/api/analyze`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        symptoms: symptomText,
+        age_group: ageGroup,
+        sex: sex,
+        duration: duration,
+        pain_level: parseInt(painLevel)
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      sessionContext = data.context;
+      displayResults(data);
+      document.getElementById('followUpSection').classList.remove('hidden');
+      
+      // Save to history if logged in
+      if (token) {
+        saveToHistory(data);
+      }
+      
+      // Increment counter
+      totalChecks++;
+      localStorage.setItem('mediscan_count', totalChecks.toString());
+    } else {
+      alert('Analysis failed: ' + (data.detail || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Failed to connect to server. Please ensure the backend is running.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyse My Symptoms';
+  }
+}
+
+function displayResults(data) {
+  const resultsSection = document.getElementById('resultsSection');
+  const resultsContent = document.getElementById('resultsContent');
+  
+  resultsSection.classList.remove('hidden');
+
+  const triageColors = {
+    'home care': 'bg-emerald-50 border-emerald-200 text-emerald-900',
+    'doctor': 'bg-amber-50 border-amber-200 text-amber-900',
+    'emergency': 'bg-red-50 border-red-200 text-red-900'
+  };
+
+  const triageClass = triageColors[data.triage_level?.toLowerCase()] || triageColors['home care'];
+
+  let html = `
+    <div class="mb-4 rounded-lg border ${triageClass} p-4">
+      <h3 class="mb-2 font-semibold">Triage Level: ${data.triage_level || 'Home Care'}</h3>
+      <p class="text-sm">${data.recommendation || 'Based on your symptoms, home care is recommended.'}</p>
+    </div>
+  `;
+
+  if (data.conditions && data.conditions.length > 0) {
+    html += `
+      <div class="mb-4">
+        <h3 class="mb-2 font-semibold">Possible Conditions</h3>
+        <ul class="space-y-2">
+    `;
+    data.conditions.forEach(condition => {
+      html += `
+        <li class="flex items-center justify-between rounded-lg border border-stone-200 p-3">
+          <span class="font-medium">${condition.name || condition}</span>
+          <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900">
+            ${condition.confidence ? Math.round(condition.confidence * 100) + '%' : 'Unknown'}
+          </span>
+        </li>
+      `;
+    });
+    html += '</ul></div>';
+  }
+
+  if (data.warning_signs && data.warning_signs.length > 0) {
+    html += `
+      <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+        <h3 class="mb-2 font-semibold text-red-900">Warning Signs</h3>
+        <ul class="list-disc list-inside text-sm text-red-800">
+    `;
+    data.warning_signs.forEach(sign => {
+      html += `<li>${sign}</li>`;
+    });
+    html += '</ul></div>';
+  }
+
+  resultsContent.innerHTML = html;
+}
+
+async function askFollowUp() {
+  const question = document.getElementById('followUpInput').value;
+  if (!question.trim()) return;
+
+  try {
+    const token = getAccessToken();
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE}/api/followup`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        question: question,
+        context: sessionContext
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      const followUpContent = document.getElementById('followUpContent');
+      followUpContent.innerHTML += `
+        <div class="mb-2 rounded-lg border border-stone-200 bg-stone-50 p-3">
+          <p class="font-semibold text-sm">Q: ${question}</p>
+          <p class="mt-1 text-sm text-stone-700">${data.answer || 'No answer available.'}</p>
+        </div>
+      `;
+      document.getElementById('followUpInput').value = '';
+    } else {
+      alert('Follow-up failed: ' + (data.detail || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Failed to connect to server.');
+  }
+}
+
+function saveToHistory(data) {
+  const history = JSON.parse(localStorage.getItem('mediscan_history') || '[]');
+  history.unshift({
+    timestamp: new Date().toISOString(),
+    symptoms: document.getElementById('symptomText').value,
+    triage_level: data.triage_level,
+    conditions: data.conditions
+  });
+  localStorage.setItem('mediscan_history', JSON.stringify(history.slice(0, 10)));
+}
+
+function loadHistory() {
+  const history = JSON.parse(localStorage.getItem('mediscan_history') || '[]');
+  const historyContent = document.getElementById('historyContent');
+
+  if (history.length === 0) {
+    historyContent.innerHTML = '<p class="text-stone-600">No history yet. Start analyzing your symptoms!</p>';
+    return;
+  }
+
+  let html = '';
+  history.forEach(item => {
+    const date = new Date(item.timestamp).toLocaleDateString();
+    html += `
+      <div class="mb-4 rounded-lg border border-stone-200 p-4">
+        <div class="mb-2 flex items-center justify-between">
+          <span class="text-xs text-stone-500">${date}</span>
+          <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-900">${item.triage_level || 'Home Care'}</span>
+        </div>
+        <p class="text-sm font-medium">${item.symptoms}</p>
+      </div>
+    `;
+  });
+
+  historyContent.innerHTML = html;
+}
+
+// Initialize
+checkAuth();
+</script>
+</body>
+</html>

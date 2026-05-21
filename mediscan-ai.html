@@ -28,10 +28,10 @@
     </div>
     <span class="font-serif text-xl text-stone-900">Medi<span class="text-emerald-700">Scan</span> AI</span>
   </a>
-  <div class="hidden items-center gap-6 md:flex">
-    <a href="#" class="text-sm font-medium text-stone-600 hover:text-stone-900" onclick="switchTab('checklist'); return false;">Symptom Checklist</a>
-    <a href="#" class="text-sm font-medium text-stone-600 hover:text-stone-900" onclick="switchTab('history'); return false;">History</a>
-    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">MVP v1.0</span>
+  <div class="flex items-center gap-4 md:gap-6">
+    <a href="#" class="hidden text-sm font-medium text-stone-600 hover:text-stone-900 md:block" onclick="switchTab('checklist'); return false;">Symptom Checklist</a>
+    <a href="#" class="hidden text-sm font-medium text-stone-600 hover:text-stone-900 md:block" onclick="switchTab('history'); return false;">History</a>
+    <span class="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900 md:block">MVP v1.0</span>
     <span class="text-xs font-semibold text-stone-600" id="navUser"></span>
     <button class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50" id="navLogout" onclick="logout()" style="display:none">Logout</button>
   </div>
@@ -288,7 +288,10 @@ let sessionContext = null;
 let queryHistory = [];
 let totalChecks = parseInt(localStorage.getItem('mediscan_count') || '0');
 
-const API_BASE = 'http://127.0.0.1:8000';
+// Auto-detect backend URL based on environment
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://127.0.0.1:8000'
+  : (window.location.protocol === 'http:' ? 'http://' + window.location.hostname + ':8000' : 'https://' + window.location.hostname + ':8000');
 
 function getAccessToken() {
   return localStorage.getItem('mediscan_token');
@@ -315,29 +318,38 @@ async function fetchMe() {
   if (!res.ok) return null;
   return await res.json();
 }
-
 async function refreshAuthUI() {
-  const me = await fetchMe();
-  const authed = !!me;
+  try {
+    const me = await fetchMe();
+    const authed = !!me;
 
-  document.getElementById('authBanner').style.display = authed ? 'none' : '';
-  document.getElementById('mainCard').classList.toggle('opacity-60', !authed);
+    document.getElementById('authBanner').style.display = authed ? 'none' : '';
+    document.getElementById('mainCard').classList.toggle('opacity-60', !authed);
 
-  const historyKey = authed ? ('mediscan_history_' + me.email) : null;
-  queryHistory = JSON.parse(localStorage.getItem(historyKey || 'mediscan_history') || '[]');
-  renderHistory();
+    const historyKey = authed ? ('mediscan_history_' + me.email) : null;
+    queryHistory = JSON.parse(localStorage.getItem(historyKey || 'mediscan_history') || '[]');
+    renderHistory();
 
-  const navUser = document.getElementById('navUser');
-  const navLogout = document.getElementById('navLogout');
-  if (authed) {
-    navUser.textContent = me.email;
-    navLogout.style.display = '';
-  } else {
-    navUser.textContent = '';
-    navLogout.style.display = 'none';
+    const navUser = document.getElementById('navUser');
+    const navLogout = document.getElementById('navLogout');
+    if (authed) {
+      navUser.textContent = me.email;
+      navLogout.style.display = '';
+      console.log('User authenticated:', me.email);
+    } else {
+      navUser.textContent = '';
+      navLogout.style.display = 'none';
+      console.log('User not authenticated');
+    }
+
+    return authed;
+  } catch (e) {
+    console.error('Error refreshing Auth UI:', e);
+    // If backend is down, we still want the UI to be usable in offline mode (checklist)
+    // but we should warn the user.
+    document.getElementById('navUser').textContent = 'Backend Offline';
+    return false;
   }
-
-  return authed;
 }
 
 async function login() {
@@ -472,7 +484,11 @@ function submitChecklist() {
 
 async function analyseSymptoms() {
   const authed = await refreshAuthUI();
-  if (!authed) return;
+  if (!authed) {
+    document.getElementById('authBanner').scrollIntoView({ behavior: 'smooth' });
+    alert('Please log in or create an account first to use the AI analysis feature.');
+    return;
+  }
 
   const symptoms = document.getElementById('symptomText').value.trim();
   if (!symptoms) return alert('Please describe your symptoms first.');

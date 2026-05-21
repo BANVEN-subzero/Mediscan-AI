@@ -6,22 +6,15 @@ set "BACKEND=%~dp0backend"
 
 echo.
 echo ==============================
-echo  MediScan AI - Local Runner
+echo  MediScan AI - Backend Viewer
 echo ==============================
-echo Root:     %ROOT%
-echo Backend:  %BACKEND%
+echo Backend: %BACKEND%
 echo.
 
 if not exist "%BACKEND%\main.py" (
   echo [ERROR] Backend not found at: %BACKEND%\main.py
   pause
   exit /b 1
-)
-
-if not exist "%BACKEND%\.env" (
-  echo ALLOWED_ORIGINS=*> "%BACKEND%\.env"
-  echo JWT_SECRET_KEY=dev-change-me>> "%BACKEND%\.env"
-  echo [INFO] Created default .env
 )
 
 if not exist "%BACKEND%\.venv\Scripts\python.exe" (
@@ -78,36 +71,14 @@ if not exist "%BACKEND%\models\condition_model.pkl" (
   )
 )
 
-REM Write backend launcher script
-echo @echo off > "%ROOT%\_start_backend.bat"
-echo cd /d "%BACKEND%" >> "%ROOT%\_start_backend.bat"
-echo "%BACKEND%\.venv\Scripts\python.exe" main.py >> "%ROOT%\_start_backend.bat"
-echo pause >> "%ROOT%\_start_backend.bat"
-
-REM Write frontend launcher script
-echo @echo off > "%ROOT%\_start_frontend.bat"
-echo cd /d "%ROOT%" >> "%ROOT%\_start_frontend.bat"
-echo py -m http.server 5500 >> "%ROOT%\_start_frontend.bat"
-echo pause >> "%ROOT%\_start_frontend.bat"
-
-echo [INFO] Starting backend on http://127.0.0.1:8000 ...
-start "MediScan Backend" "%ROOT%\_start_backend.bat"
-
-echo [INFO] Starting frontend on http://127.0.0.1:5500 ...
-start "MediScan Frontend" "%ROOT%\_start_frontend.bat"
-
-echo [INFO] Waiting for servers to start...
-ping 127.0.0.1 -n 5 >nul
-
-echo [INFO] Opening app in browser...
-start "" "http://127.0.0.1:5500/mediscan-ai.html"
-
 echo.
-echo [DONE] MediScan AI is running!
-echo  Backend:  http://127.0.0.1:8000
-echo  Frontend: http://127.0.0.1:5500/mediscan-ai.html
+echo [INFO] Starting backend viewer...
+echo [INFO] Backend will run on http://127.0.0.1:8000
+echo [INFO] Press Ctrl+C to stop
 echo.
-echo Close the two server windows to stop the app.
-echo You can also use view_backend.bat to see detailed logs.
-echo.
+
+cd /d "%BACKEND%"
+"%BACKEND%\.venv\Scripts\python.exe" main.py
+
+pause
 endlocal

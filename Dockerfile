@@ -1,9 +1,9 @@
 FROM nginx:alpine
 
-# Copy the static HTML file
-COPY mediscan-ai.html /usr/share/nginx/html/
+# Copy nginx reverse proxy config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Optional: Set it as index.html so it loads by default
+# Copy the static HTML file as the main page
 COPY mediscan-ai.html /usr/share/nginx/html/index.html
 
 # Health check

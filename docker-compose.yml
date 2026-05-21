@@ -9,12 +9,26 @@ services:
       - "8000:8000"
     environment:
       - FLASK_ENV=production
-      - JWT_SECRET_KEY=dev-change-me
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=8000
+      - JWT_SECRET_KEY=mediscan-change-in-production
       - ALLOWED_ORIGINS=*
-      # AWS Credentials placeholder for CloudWatch Logs
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-""}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-""}
-      - AWS_REGION=${AWS_REGION:-"us-east-1"}
+      # AWS Credentials (optional - only needed for CloudWatch)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    volumes:
+      # Persist the SQLite database across container restarts
+      - mediscan_db:/app
+    networks:
+      - mediscan-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
   frontend:
     build:
@@ -24,3 +38,14 @@ services:
       - "80:80"
     depends_on:
       - backend
+    networks:
+      - mediscan-network
+    restart: unless-stopped
+
+networks:
+  mediscan-network:
+    driver: bridge
+
+volumes:
+  mediscan_db:
+    driver: local

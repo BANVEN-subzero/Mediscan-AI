@@ -33,15 +33,26 @@ model_metadata = None
 def load_models():
     global condition_model, triage_model, model_metadata
     try:
-        with open(os.path.join(models_dir, "condition_model.pkl"), 'rb') as f:
+        paths = {
+            "condition": os.path.join(models_dir, "condition_model.pkl"),
+            "triage": os.path.join(models_dir, "triage_model.pkl"),
+            "metadata": os.path.join(models_dir, "metadata.pkl")
+        }
+        
+        for name, path in paths.items():
+            if not os.path.exists(path):
+                print(f"Error: {name} model file not found at {path}")
+                return
+
+        with open(paths["condition"], 'rb') as f:
             condition_model = pickle.load(f)
-        with open(os.path.join(models_dir, "triage_model.pkl"), 'rb') as f:
+        with open(paths["triage"], 'rb') as f:
             triage_model = pickle.load(f)
-        with open(os.path.join(models_dir, "metadata.pkl"), 'rb') as f:
+        with open(paths["metadata"], 'rb') as f:
             model_metadata = pickle.load(f)
         print("Models loaded successfully")
     except Exception as e:
-        print(f"Warning: Could not load models: {e}")
+        print(f"Critical Error: Could not load models: {e}")
 
 load_models()
 
@@ -189,13 +200,20 @@ def create_app() -> Flask:
     @jwt_required()
     def analyze_route():
         data = request.get_json(silent=True) or {}
-        return jsonify(analyze_logic(data))
+        app.logger.info(f"Analyzing symptoms: {data.get('symptomsText', '')[:50]}...")
+        result = analyze_logic(data)
+        app.logger.info(f"Triage result: {result.get('triageLevel')}")
+        return jsonify(result)
 
     @app.post("/api/followup")
     @jwt_required()
     def followup_route():
         data = request.get_json(silent=True) or {}
         return jsonify(followup_logic(data))
+
+    @app.before_request
+    def log_request():
+        app.logger.info(f"--- Request: {request.method} {request.path} ---")
 
     return app
 
@@ -220,9 +238,6 @@ class PossibleCondition:
     def to_dict(self):
         return {"name": self.name, "description": self.description, "confidence": self.confidence}
 
-def _ensure_models_loaded() -> None:
-    if condition_model is None or triage_model is None or model_metadata is None:
-        raise Exception("Local models are not loaded.")
 
 # Symptom mapping for text-to-vector conversion
 # Maps common symptom descriptions to dataset column names
@@ -382,10 +397,17 @@ def extract_symptoms_from_text(text: str) -> list[int]:
         for keyword in keywords:
             if re.search(r'\b' + re.escape(keyword) + r'\b', text_lower):
                 symptom_vector[i] = 1
+                print(f"Matched keyword: '{keyword}' -> symptom: '{col}'")
                 break
             elif keyword in text_lower and len(keyword) > 4:
                 symptom_vector[i] = 1
+                print(f"Matched substring: '{keyword}' -> symptom: '{col}'")
                 break
+    
+    if sum(symptom_vector) == 0:
+        print(f"No symptoms matched in text: '{text[:100]}...'")
+    else:
+        print(f"Extracted {sum(symptom_vector)} symptoms.")
     
     return symptom_vector
 

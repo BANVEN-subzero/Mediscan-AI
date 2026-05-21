@@ -11,11 +11,8 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy the application code and pre-trained models
 COPY . .
-
-# Run the training script to ensure models are present
-RUN python train_model.py
 
 # Expose port
 EXPOSE 8000
@@ -29,5 +26,5 @@ ENV FLASK_RUN_PORT=8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the Flask backend using python or gunicorn (using python for simplicity like original script)
+# Start the Flask backend
 CMD ["python", "main.py"]
