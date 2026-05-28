@@ -24,10 +24,10 @@ MediScan AI is now fully configured with DevOps tools following Software Constru
 - Backend Dockerfile includes health checks
 - Frontend Dockerfile includes health checks
 
-### 4. Frontend Auto-Detection
-- Updated `mediscan-ai.html` to auto-detect backend URL
-- Works in both local (127.0.0.1:8000) and Docker (localhost:8000) environments
-- No manual configuration needed
+### 4. Frontend Isolation
+- Moved all frontend files into the `frontend/` directory.
+- Added `vercel.json` for seamless Vercel deployment.
+- Updated API auto-detection to handle separated hosting.
 
 ### 5. Testing Script
 - **File**: `test-backend.bat`
@@ -66,15 +66,34 @@ docker compose down
 ### Option 2: Local Development
 
 1. **Start with the provided script**
-- Double-click `run-mediscan.bat`
+- Double-click `run-mediscan.bat` (this starts both backend and frontend)
 
-2. **Or start backend only**
-- Double-click `backend-view.bat`
-
-3. **Access the application**
-- Frontend: http://127.0.0.1:5500/mediscan-ai.html
+2. **Access the application**
+- Frontend: http://127.0.0.1:5500/index.html
 - Backend Health: http://127.0.0.1:8000/health
-- Backend API: http://127.0.0.1:8000
+
+### Option 3: Hosting Frontend on Vercel
+
+1. **Prerequisites**
+- Push your code to a GitHub/GitLab/Bitbucket repository.
+- Deploy your backend (e.g., to Render or Railway) and get its URL.
+
+2. **Update API Configuration**
+- Open `frontend/api-config.js` and update the production URL:
+  ```javascript
+  return 'https://your-backend-api.com';
+  ```
+
+3. **Vercel Deployment**
+- Log in to [Vercel](https://vercel.com).
+- Click **"Add New"** > **"Project"**.
+- Import your repository.
+- In the **"Root Directory"** setting, click **"Edit"** and select the `frontend` folder.
+- Click **"Deploy"**.
+
+4. **Access your App**
+- Vercel will provide a URL (e.g., `https://mediscan-frontend.vercel.app`).
+- Your frontend will now communicate with your live backend.
 
 ## Account & Symptom Analysis
 

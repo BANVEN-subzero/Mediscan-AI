@@ -86,7 +86,7 @@ echo pause >> "%ROOT%\_start_backend.bat"
 
 REM Write frontend launcher script
 echo @echo off > "%ROOT%\_start_frontend.bat"
-echo cd /d "%ROOT%" >> "%ROOT%\_start_frontend.bat"
+echo cd /d "%ROOT%frontend" >> "%ROOT%\_start_frontend.bat"
 echo py -m http.server 5500 >> "%ROOT%\_start_frontend.bat"
 echo pause >> "%ROOT%\_start_frontend.bat"
 
@@ -100,12 +100,12 @@ echo [INFO] Waiting for servers to start...
 ping 127.0.0.1 -n 5 >nul
 
 echo [INFO] Opening app in browser...
-start "" "http://127.0.0.1:5500/mediscan-ai.html"
+start "" "http://127.0.0.1:5500/index.html"
 
 echo.
 echo [DONE] MediScan AI is running!
 echo  Backend:  http://127.0.0.1:8000
-echo  Frontend: http://127.0.0.1:5500/mediscan-ai.html
+echo  Frontend: http://127.0.0.1:5500/index.html
 echo.
 echo Close the two server windows to stop the app.
 echo You can also use view_backend.bat to see detailed logs.

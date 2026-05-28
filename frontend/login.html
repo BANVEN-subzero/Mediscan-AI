@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediScan AI — Secure Sign In</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23022c22' width='100' height='100'/><path fill='%2310b981' d='M50 20c-5.5 0-10 4.5-10 10v10h-5c-2.8 0-5 2.2-5 5v25c0 2.8 2.2 5 5 5h30c2.8 0 5-2.2 5-5V45c0-2.8-2.2-5-5-5h-5V30c0-5.5-4.5-10-10-10zm0 5c2.8 0 5 2.2 5 5v10H45V30c0-2.8 2.2-5 5-5z'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-serif {
+            font-family: 'DM Serif Display', serif;
+        }
+        .emerald-gradient {
+            background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #022c22 100%);
+        }
+        .glow-spot {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0) 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 emerald-gradient relative overflow-x-hidden flex flex-col justify-between selection:bg-emerald-500 selection:text-emerald-950">
+
+    <!-- Glowing Accents -->
+    <div class="glow-spot -top-20 -left-20"></div>
+    <div class="glow-spot bottom-20 -right-20"></div>
+
+    <!-- Header / Nav -->
+    <header class="w-full border-b border-white/10 bg-emerald-950/40 backdrop-blur-md relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <a href="index.html" class="flex items-center gap-3 group">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500 text-emerald-950 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-all duration-300">
+                        <i class="fas fa-heartbeat text-xl"></i>
+                    </div>
+                    <span class="font-serif text-2xl tracking-wide text-white group-hover:text-emerald-300 transition duration-300">
+                        Medi<span class="text-emerald-400">Scan</span> AI
+                    </span>
+                </a>
+                <a href="index.html" class="text-sm font-semibold text-slate-300 hover:text-white transition flex items-center gap-2">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                    <span>Back to Home</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Form -->
+    <main class="relative z-10 flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            
+            <!-- Logo & Title -->
+            <div class="text-center">
+                <h2 class="font-serif text-4xl text-white">Welcome Back</h2>
+                <p class="mt-2.5 text-sm text-slate-400">Sign in to access your secure symptom triage panel</p>
+            </div>
+
+            <!-- Login Card -->
+            <div class="glass-card rounded-2xl p-8 shadow-2xl relative">
+                <form id="loginForm" class="space-y-6">
+                    <!-- Email field -->
+                    <div>
+                        <label for="email" class="block text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">Email Address</label>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <input id="email" name="email" type="email" required autocomplete="email"
+                                class="block w-full pl-10 pr-3 py-3.5 border border-white/10 rounded-xl bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-transparent transition-all duration-200 text-sm"
+                                placeholder="you@example.com">
+                        </div>
+                    </div>
+
+                    <!-- Password field -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="password" class="block text-xs font-bold uppercase tracking-wider text-emerald-400">Password</label>
+                        </div>
+                        <div class="relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <input id="password" name="password" type="password" required autocomplete="current-password"
+                                class="block w-full pl-10 pr-3 py-3.5 border border-white/10 rounded-xl bg-white/5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-transparent transition-all duration-200 text-sm"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <!-- Alert message container -->
+                    <div id="errorMessage" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-300 px-4 py-3 rounded-xl text-xs leading-relaxed flex items-start gap-2.5">
+                        <i class="fas fa-circle-exclamation mt-0.5"></i>
+                        <span id="errorMessageText">Login failed.</span>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitBtn" 
+                        class="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-emerald-950 bg-emerald-500 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 hover:shadow-emerald-500/20 transition-all duration-200">
+                        <span id="btnText">Sign In</span>
+                        <i id="btnSpinner" class="fas fa-circle-notch fa-spin ml-2.5 hidden"></i>
+                    </button>
+                </form>
+
+                <!-- Back link -->
+                <div class="mt-6 text-center text-xs border-t border-white/10 pt-6">
+                    <p class="text-slate-400">
+                        Don't have a secure account? 
+                        <a href="register.html" class="text-emerald-400 font-bold hover:underline ml-1">Create Account</a>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-emerald-950/40 py-8 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            <p>&copy; 2026 MediScan AI. All personal data is encrypted and handled securely.</p>
+        </div>
+    </footer>
+
+    <script src="api-config.js"></script>
+    <script>
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const errorMessageText = document.getElementById('errorMessageText');
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+            
+            // Reset message
+            errorMessage.classList.add('hidden');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.textContent = 'Signing In...';
+            btnSpinner.classList.remove('hidden');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // CRITICAL FIX: Storing correct token and user object
+                    localStorage.setItem('mediscan_token', data.accessToken);
+                    localStorage.setItem('mediscan_user', JSON.stringify(data.user));
+                    
+                    // Redirect to the flagship symptom checker dashboard
+                    window.location.href = 'mediscan-ai.html';
+                } else {
+                    errorMessageText.textContent = data.detail || 'Login failed. Please check your credentials.';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorMessageText.textContent = 'Unable to connect to clinical gateway. Ensure backend is running.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Sign In';
+                btnSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

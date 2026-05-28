@@ -31,7 +31,7 @@ docker compose down
 **Build images:**
 ```bash
 docker build -t mediscan-backend ./backend
-docker build -t mediscan-frontend .
+docker build -t mediscan-frontend ./frontend
 ```
 
 **Run containers:**

@@ -13,17 +13,18 @@ services:
       - FLASK_RUN_PORT=8000
       - JWT_SECRET_KEY=mediscan-change-in-production
       - ALLOWED_ORIGINS=*
+      - DATABASE_URL=sqlite:////app/data/mediscan.db
       # AWS Credentials (optional - only needed for CloudWatch)
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
       - AWS_REGION=${AWS_REGION:-us-east-1}
     volumes:
-      # Persist the SQLite database across container restarts
-      - mediscan_db:/app
+      # Persist only the data directory, not the whole application code
+      - mediscan_db:/app/data
     networks:
       - mediscan-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -32,7 +33,7 @@ services:
 
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "80:80"
