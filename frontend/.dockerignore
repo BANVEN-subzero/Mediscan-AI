@@ -1,0 +1,5 @@
+*.bat
+*.ps1
+*.log
+bat_err.txt
+bat_out.txt

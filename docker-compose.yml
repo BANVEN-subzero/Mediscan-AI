@@ -11,8 +11,8 @@ services:
       - FLASK_ENV=production
       - FLASK_RUN_HOST=0.0.0.0
       - FLASK_RUN_PORT=8000
-      - JWT_SECRET_KEY=mediscan-change-in-production
-      - ALLOWED_ORIGINS=*
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-mediscan-change-in-production}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
       - DATABASE_URL=sqlite:////app/data/mediscan.db
       # AWS Credentials (optional - only needed for CloudWatch)
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
@@ -38,7 +38,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - mediscan-network
     restart: unless-stopped

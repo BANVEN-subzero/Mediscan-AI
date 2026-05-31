@@ -16,6 +16,8 @@ const API_BASE = (() => {
     // 3. Fallback / Production environment
     // If the frontend is hosted on Vercel or another platform, it needs to hit the live backend API.
     // Replace this with your production backend API URL (e.g. on Render, Railway, AWS, etc.)
+    // For Docker deployment, the backend is available at http://backend:8000
+    // For Vercel deployment, update this to your deployed backend URL
     return 'https://mediscan-backend.onrender.com'; 
 })();
 
