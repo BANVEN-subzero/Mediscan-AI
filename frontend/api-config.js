@@ -1,6 +1,9 @@
 // api-config.js
 // MediScan AI - Global API Base Configuration
 
+// Replace this with YOUR actual Render backend URL once deployed!
+const DEPLOYED_BACKEND_URL = 'https://mediscan-ai-m6fw.onrender.com';
+
 const API_BASE = (() => {
     // 1. Check for manual override in localStorage (great for testing or dynamic configuration)
     const savedUrl = localStorage.getItem('MEDISCAN_API_URL');
@@ -18,9 +21,8 @@ const API_BASE = (() => {
         return 'http://127.0.0.1:8000';
     }
 
-    // 4. Non-localhost hostnames (e.g., Docker via LAN IP, reverse proxies, hosted environments):
-    // prefer same-origin API routing when available.
-    return origin;
+    // 4. Deployed frontend (Vercel, etc.) - use the deployed Render backend
+    return DEPLOYED_BACKEND_URL;
 })();
 
 console.log('MediScan API Base configured to:', API_BASE);
