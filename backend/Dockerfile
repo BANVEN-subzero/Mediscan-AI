@@ -17,6 +17,9 @@ RUN mkdir -p /app/data
 # Copy the application code and pre-trained models
 COPY . .
 
+# Verify models are copied
+RUN ls -la /app/models/
+
 # Expose port
 EXPOSE 8000
 

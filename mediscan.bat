@@ -16,11 +16,15 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Check if virtual environment exists
-if not exist backend\.venv (
+REM Check if virtual environment exists and is valid
+if not exist backend\.venv\Scripts\activate.bat (
     echo [1/5] Creating virtual environment...
+    if exist backend\.venv (
+        echo Removing broken virtual environment...
+        rmdir /s /q backend\.venv
+    )
     cd backend
-    python -m venv .venv
+    python -m venv .venv --include-pip
     cd ..
     if %errorlevel% neq 0 (
         echo ERROR: Failed to create virtual environment.
@@ -32,6 +36,8 @@ if not exist backend\.venv (
 echo [2/5] Activating virtual environment and installing dependencies...
 call backend\.venv\Scripts\activate.bat
 cd backend
+python -m ensurepip --upgrade
+pip install --upgrade pip
 pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install dependencies.

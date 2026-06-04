@@ -42,6 +42,9 @@ def load_models():
         for name, path in paths.items():
             if not os.path.exists(path):
                 print(f"Error: {name} model file not found at {path}")
+                print(f"Current working directory: {os.getcwd()}")
+                print(f"Models directory: {models_dir}")
+                print(f"Directory contents: {os.listdir(models_dir) if os.path.exists(models_dir) else 'Directory not found'}")
                 return
 
         with open(paths["condition"], 'rb') as f:
@@ -53,6 +56,8 @@ def load_models():
         print("Models loaded successfully")
     except Exception as e:
         print(f"Critical Error: Could not load models: {e}")
+        import traceback
+        traceback.print_exc()
 
 load_models()
 
@@ -201,9 +206,18 @@ def create_app() -> Flask:
     def analyze_route():
         data = request.get_json(silent=True) or {}
         app.logger.info(f"Analyzing symptoms: {data.get('symptomsText', '')[:50]}...")
-        result = analyze_logic(data)
-        app.logger.info(f"Triage result: {result.get('triageLevel')}")
-        return jsonify(result)
+        app.logger.info(f"Request data: {data}")
+        try:
+            result = analyze_logic(data)
+            app.logger.info(f"Triage result: {result.get('triageLevel')}")
+            return jsonify(result)
+        except Exception as e:
+            app.logger.error(f"Analyze route error: {str(e)}")
+            import traceback
+            app.logger.error(traceback.format_exc())
+            fallback = _fallback_response()
+            fallback["analysisMethod"] = "safe_fallback"
+            return jsonify(fallback), 200
 
     @app.post("/api/followup")
     @jwt_required()
@@ -504,6 +518,155 @@ CONDITION_DESCRIPTIONS = {
     "Psoriasis": "A skin disease that causes red, itchy scaly patches.",
     "Impetigo": "A highly contagious skin infection causing red sores.",
 }
+RULE_BASED_PROFILES: list[dict] = [
+    {
+        "name": "Common Cold / Viral Upper Respiratory Infection",
+        "description": "Symptoms often include cough, runny nose, sore throat, mild fever, and fatigue.",
+        "triage": "home",
+        "keywords": ["cough", "runny nose", "congestion", "sore throat", "sneezing", "mild fever", "fatigue"],
+    },
+    {
+        "name": "Influenza-like Illness",
+        "description": "Often presents with fever, headache, body aches, cough, and marked tiredness.",
+        "triage": "doctor",
+        "keywords": ["high fever", "fever", "headache", "fatigue", "muscle pain", "chills", "body aches", "cough"],
+    },
+    {
+        "name": "Gastroenteritis",
+        "description": "May include nausea, vomiting, abdominal pain, and diarrhea.",
+        "triage": "doctor",
+        "keywords": ["nausea", "vomiting", "diarrhea", "diarrhoea", "abdominal pain", "stomach pain", "dehydration"],
+    },
+    {
+        "name": "Migraine / Severe Headache Syndrome",
+        "description": "Head pain may be associated with nausea, light sensitivity, or visual disturbances.",
+        "triage": "doctor",
+        "keywords": ["migraine", "headache", "pain behind eyes", "nausea", "visual disturbances", "dizziness"],
+    },
+    {
+        "name": "Possible Cardiorespiratory Emergency",
+        "description": "Chest pain and breathing difficulty can indicate urgent medical conditions.",
+        "triage": "emergency",
+        "keywords": ["chest pain", "breathlessness", "shortness of breath", "difficulty breathing", "fast heart rate", "palpitations"],
+    },
+    {
+        "name": "Possible Neurologic Emergency",
+        "description": "Neurologic red-flag symptoms may require immediate emergency care.",
+        "triage": "emergency",
+        "keywords": ["weakness on one side", "weakness of one body side", "slurred speech", "confusion", "fainting", "coma"],
+    },
+]
+
+
+def _normalize_triage_level(value: str) -> str:
+    if value in {"home", "home_care"}:
+        return "home"
+    if value == "emergency":
+        return "emergency"
+    return "doctor"
+
+
+def _rule_based_analysis(symptoms_text: str) -> dict:
+    text = (symptoms_text or "").strip().lower()
+    if not text:
+        return {
+            "triageLevel": "doctor",
+            "triageTitle": TRIAGE_TITLES["doctor"],
+            "triageDesc": "Please provide your symptoms so I can generate a triage-oriented assessment.",
+            "possibleConditions": [
+                {
+                    "name": "Insufficient symptom details",
+                    "description": "No symptom text was provided for analysis.",
+                    "confidence": 0.25,
+                }
+            ],
+            "recommendedNextSteps": [
+                "List your top symptoms and how long you have had them.",
+                "Include severity (mild/moderate/severe) and any red-flag signs.",
+            ],
+            "warningSigns": [
+                "Trouble breathing",
+                "Chest pain or pressure",
+                "Blue lips/face",
+                "Confusion or fainting",
+                "Severe dehydration",
+            ],
+            "followUpQuestions": [
+                "What are your top 3 symptoms?",
+                "How long have you had these symptoms?",
+                "Are symptoms getting worse quickly?",
+            ],
+            "analysisMethod": "rule_based",
+        }
+
+    possible_conditions: list[dict] = []
+    triage_level = "home"
+    triage_rank = {"home": 1, "doctor": 2, "emergency": 3}
+
+    for profile in RULE_BASED_PROFILES:
+        hits = 0
+        for keyword in profile["keywords"]:
+            if keyword in text:
+                hits += 1
+        if hits == 0:
+            continue
+
+        confidence = min(0.9, 0.25 + (hits * 0.15))
+        possible_conditions.append(
+            {
+                "name": profile["name"],
+                "description": profile["description"],
+                "confidence": float(confidence),
+            }
+        )
+
+        p_triage = _normalize_triage_level(profile["triage"])
+        if triage_rank[p_triage] > triage_rank[triage_level]:
+            triage_level = p_triage
+
+    if not possible_conditions:
+        possible_conditions = [
+            {
+                "name": "Unclear symptom pattern",
+                "description": "Your symptoms were received, but they did not clearly match a known pattern.",
+                "confidence": 0.3,
+            }
+        ]
+        triage_level = "doctor"
+
+    possible_conditions = sorted(possible_conditions, key=lambda c: c["confidence"], reverse=True)[:3]
+
+    recommended_next_steps = {
+        "home": ["Rest, hydrate, and monitor symptoms.", "If symptoms worsen, consider seeing a clinician."],
+        "doctor": ["Consider booking an appointment with a clinician.", "Seek urgent care if symptoms worsen quickly."],
+        "emergency": [
+            "Seek emergency care now (local emergency number or nearest ER).",
+            "If chest pain or breathing trouble: do not drive yourself.",
+        ],
+    }.get(triage_level, [])
+
+    return {
+        "triageLevel": triage_level,
+        "triageTitle": TRIAGE_TITLES.get(triage_level, TRIAGE_TITLES["doctor"]),
+        "triageDesc": TRIAGE_DESCS.get(triage_level, TRIAGE_DESCS["doctor"]),
+        "possibleConditions": possible_conditions,
+        "recommendedNextSteps": recommended_next_steps,
+        "warningSigns": [
+            "Trouble breathing",
+            "Chest pain or pressure",
+            "Blue lips/face",
+            "Confusion or fainting",
+            "Severe dehydration",
+            "New weakness on one side of the body",
+        ],
+        "followUpQuestions": [
+            "Do you have a measured fever?",
+            "Any chest pain, shortness of breath, or severe weakness?",
+            "Any known medical conditions?",
+            "Are symptoms getting worse quickly?",
+        ],
+        "analysisMethod": "rule_based",
+    }
 
 
 def _fallback_response() -> dict:
@@ -532,33 +695,19 @@ def _fallback_response() -> dict:
 
 
 def analyze_logic(req_data: dict) -> dict:
+    symptomsText = str(req_data.get("symptomsText", "") or "").strip()
+    if not symptomsText:
+        return _rule_based_analysis("")
+
     try:
         _ensure_models_loaded()
-        symptomsText = req_data.get("symptomsText", "")
+    except Exception as e:
+        print("Model availability check failed, using rule-based analysis:", e)
+        return _rule_based_analysis(symptomsText)
+    try:
         symptom_vector = extract_symptoms_from_text(symptomsText)
         if not symptom_vector or sum(symptom_vector) == 0:
-            return {
-                "triageLevel": "doctor",
-                "triageTitle": TRIAGE_TITLES["doctor"],
-                "triageDesc": "I couldn't confidently match your description to known symptom keywords. Try listing symptoms explicitly.",
-                "possibleConditions": [],
-                "recommendedNextSteps": [
-                    "If you have severe symptoms, seek emergency care.",
-                    "Otherwise, consider contacting a healthcare professional.",
-                ],
-                "warningSigns": [
-                    "Trouble breathing",
-                    "Chest pain or pressure",
-                    "Blue lips/face",
-                    "Confusion or fainting",
-                    "Severe dehydration",
-                ],
-                "followUpQuestions": [
-                    "What are your top 3 symptoms?",
-                    "How long have you had these symptoms?",
-                    "Do you have a measured fever?",
-                ],
-            }
+            return _rule_based_analysis(symptomsText)
 
         X = np.array([symptom_vector])
         triage_level = str(triage_model.predict(X)[0])
@@ -598,10 +747,11 @@ def analyze_logic(req_data: dict) -> dict:
                 "Any known medical conditions?",
                 "Are symptoms getting worse quickly?",
             ],
+            "analysisMethod": "ml_model",
         }
     except Exception as e:
         print("Analyze Error:", e)
-        return _fallback_response()
+        return _rule_based_analysis(symptomsText)
 
 
 def followup_logic(req_data: dict) -> dict:
@@ -613,7 +763,7 @@ def followup_logic(req_data: dict) -> dict:
 
         context = req_data.get("context", {})
         result = context.get("result", {})
-        triage_level = str(result.get("triage", "doctor"))
+        triage_level = _normalize_triage_level(str(result.get("triage", "doctor")))
         conditions = [c.get("name") for c in result.get("conditions", [])]
 
         answer = "I can provide general information based on your symptoms, but I cannot give a definitive medical diagnosis. "
@@ -647,7 +797,7 @@ def followup_logic(req_data: dict) -> dict:
 
 if __name__ == "__main__":
     app = create_app()
-    host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
-    port = int(os.environ.get("FLASK_RUN_PORT", "8000"))
+    host = os.environ.get("FLASK_RUN_HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", os.environ.get("FLASK_RUN_PORT", "8000")))
     print(f"Binding to {host}:{port}")
     app.run(host=host, port=port, debug=False)
