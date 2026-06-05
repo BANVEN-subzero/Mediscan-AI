@@ -1,0 +1,14 @@
+name: Keep MediScan AI Backend Awake
+
+on:
+  schedule:
+    # This triggers a cron job every 14 minutes, 24/7
+    - cron: '*/14 * * * *'
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Web Service
+        run: |
+          curl -I https://mediscan-ai-2-by4n.onrender.com/health
