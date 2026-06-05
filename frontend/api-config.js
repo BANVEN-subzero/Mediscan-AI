@@ -2,7 +2,7 @@
 // MediScan AI - Global API Base Configuration
 
 // Replace this with YOUR actual Render backend URL once deployed!
-const DEPLOYED_BACKEND_URL = 'https://mediscan-ai-m6fw.onrender.com';
+const DEPLOYED_BACKEND_URL = 'https://mediscan-ai-2-by4n.onrender.com';
 
 const API_BASE = (() => {
     // 1. Check for manual override in localStorage (great for testing or dynamic configuration)
