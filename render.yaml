@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python backend/main.py
+    startCommand: gunicorn --chdir backend main:app
     envVars:
       - key: ALLOWED_ORIGINS
         value: "*"
