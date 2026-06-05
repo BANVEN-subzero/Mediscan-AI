@@ -4,6 +4,7 @@ on:
   schedule:
     # This triggers a cron job every 14 minutes, 24/7
     - cron: '*/14 * * * *'
+  workflow_dispatch:  # Allows manual triggering for testing
 
 jobs:
   ping-backend:
@@ -11,4 +12,7 @@ jobs:
     steps:
       - name: Ping Render Web Service
         run: |
-          curl -I https://mediscan-ai-2-by4n.onrender.com/health
+          echo "Pinging backend..."
+          curl -f -X GET https://mediscan-ai-2-by4n.onrender.com/health
+          echo ""
+          echo "Done"
